@@ -1,14 +1,8 @@
-# Project
+# Intelligent Document Processing with GPT Fallback
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
-
-As the maintainer of this project, please make a few updates:
-
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+The use of Azure Document Intelligence and its pre-built models is a well-established method to crack unstructured documents. Nevertheless, there are always documents that it is unable to perform reilable extraction with. This process attempts to extract required data points for an invoice. If those elements are not found then we fall back to other means.
+- Fuzzy matching against a list of known vales
+- Use of GPT models to extract data
 
 ## Contributing
 
