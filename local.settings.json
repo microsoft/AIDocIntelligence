@@ -3,6 +3,7 @@
   "Values": {
     "FUNCTIONS_WORKER_RUNTIME": "python",
     "AzureWebJobsFeatureFlags": "EnableWorkerIndexing",
-    "AzureWebJobsStorage": "UseDevelopmentStorage=true"
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "18bf28_STORAGE": "UseDevelopmentStorage=true"
   }
 }
