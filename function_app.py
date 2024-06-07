@@ -2,8 +2,11 @@ import azure.functions as func
 import datetime
 import json
 import logging
+from dotenv import load_dotenv
 
-from app import ingest_invoice
+load_dotenv()
+
+from orchestrator import ingest_invoice
 
 app = func.FunctionApp()
 
@@ -23,13 +26,17 @@ def http_test(req: func.HttpRequest) -> func.HttpResponse:
 
 @app.blob_trigger(arg_name="myblob", path="invoices",
                                connection="18bf28_STORAGE") 
-def new_invoice_file(myblob: func.InputStream):
+@app.blob_output(arg_name="outputblob",
+                path="invoices",
+                connection="18bf28_STORAGE")
+def new_invoice_file(myblob: func.InputStream, outputblob: func.Out[str]):
     logging.info(f"Python blob trigger function processed blob"
                 f"Name: {myblob.name} Blob Size: {myblob.length} bytes")
     
     results = ingest_invoice(myblob.read())
 
     # do something with results
+    outputblob.set(json.dumps(results))
 
     return
 
