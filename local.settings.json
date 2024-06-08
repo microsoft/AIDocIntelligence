@@ -4,6 +4,9 @@
     "FUNCTIONS_WORKER_RUNTIME": "python",
     "AzureWebJobsFeatureFlags": "EnableWorkerIndexing",
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "18bf28_STORAGE": "UseDevelopmentStorage=true"
+    "ARTIFACT_STORAGE": "UseDevelopmentStorage=true",
+    "DOCUMENT_INTELLIGENCE_ENDPOINT": "https://docintelligencedemo-afr.cognitiveservices.azure.com/",
+    "DOCUMENT_INTELLIGENCE_KEY": "d6903a308aee46fea28540d13221fea0",
+    "COMPANY_FILE_PATH": "c:\\tmp\\comp_plant_addr.csv"
   }
 }

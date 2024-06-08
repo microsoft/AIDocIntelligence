@@ -4,6 +4,20 @@ The use of Azure Document Intelligence and its pre-built models is a well-establ
 - Fuzzy matching against a list of known vales
 - Use of GPT models to extract data
 
+## Prerequisites for local dev
+* Python 3.11
+* Azure Functions Core Tools
+* Azure Document Intelligence instance with endpoint and API key
+* CSV that matches format Type, Code, Name, Name 1, Name 2, City, District, Postal Code, Street, House Number, Country Key, Region
+
+## Environment Variables
+* ARTIFACT_STORAGE
+* DOCUMENT_INTELLIGENCE_ENDPOINT
+* DOCUMENT_INTELLIGENCE_KEY
+* COMPANY_FILE_PATH
+
+For local dev add these to a local.settings.json file 
+
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a

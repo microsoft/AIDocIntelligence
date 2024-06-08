@@ -2,38 +2,21 @@ import azure.functions as func
 import datetime
 import json
 import logging
-from dotenv import load_dotenv
-
-load_dotenv()
 
 from orchestrator import ingest_invoice
 
 app = func.FunctionApp()
 
-@app.route(route="http_invoice")
-def http_test(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info('Invoice processing triggered.')
-
-    # This orchestration will be triggered by a new document in a blob
-    # storage account. For now we are HTTP triggered to test functionality
-    # https://learn.microsoft.com/en-us/azure/azure-functions/functions-event-grid-blob-trigger?pivots=programming-language-python
-
-    # the blob trigger will pass the blob name to the function
-    ingest_invoice()
-
-    return func.HttpResponse("Invoice processing complete.")
-
-
-@app.blob_trigger(arg_name="myblob", path="invoices",
-                               connection="18bf28_STORAGE") 
+@app.blob_trigger(arg_name="invoice_blob", path="invoices",
+                               connection="ARTIFACT_STORAGE") 
 @app.blob_output(arg_name="outputblob",
-                path="invoices",
-                connection="18bf28_STORAGE")
-def new_invoice_file(myblob: func.InputStream, outputblob: func.Out[str]):
+                path="results/{rand-guid}.json",
+                connection="ARTIFACT_STORAGE")
+def new_invoice_file(invoice_blob: func.InputStream, outputblob: func.Out[str]):
     logging.info(f"Python blob trigger function processed blob"
-                f"Name: {myblob.name} Blob Size: {myblob.length} bytes")
+                f"Name: {invoice_blob.name} Blob Size: {invoice_blob.length} bytes")
     
-    results = ingest_invoice(myblob.read())
+    results = ingest_invoice(invoice_blob.read())
 
     # do something with results
     outputblob.set(json.dumps(results))
