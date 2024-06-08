@@ -2,26 +2,40 @@ import logging
 import json
 
 from docintelligence import crack_invoice
-from companylookup import company_match
+import companylookup
 from gptvision import scan_invoice_with_gpt
 
 model_confidence_threshhold = 0.8 # read from env var
 
-# Function to extract address components
-def extract_address_components(address_value):
-    # check for None values
-    components = {
-        'Street': address_value.street_address,
-        'City': address_value.city,
-        'Zip Code': address_value.postal_code
-    }
-    return {k: v for k, v in components.items() if v}  # Ensure no None values
+#
+def attempt_company_lookup_strategies(invoice_data_dict: dict) -> dict:
+    """ Attempt to match the company name and address to known companies using various strategies """
 
+    # this list has all the strategies we want to try
+    # as soon as one returns candidates we exit
+    match_strategies = [
+        companylookup.ExactCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(),
+        companylookup.FuzzyCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy()]
+
+    for match_strategy in match_strategies:
+        matcher = companylookup.CompanyMatcher(match_strategy)
+
+        company_candidates = matcher.match_companies(
+            invoice_data_dict.get('CustomerName'), 
+            invoice_data_dict.get('CustomerAddress').get('valueAddress'))
+        
+        if ( len(company_candidates) > 0):
+            candidateprocess_dict = {'process':'COMPANY_MATCH', 'strategy':match_strategy.__class__.__name__, 'company_candidates':company_candidates}
+            return {'candidate_process':candidateprocess_dict, 'invoice_data': invoice_data_dict}
+        
+    return None
+    
 def validate_po_number(invoice_data: dict) -> bool:
     # customer_id = invoice_data.get("CustomerId")
     # if customer_id and customer_id.get("confidence") > model_confidence_threshhold:
     #     return True
     
+    # TODO: is there any format to PO number we could verify?
     purchase_order = invoice_data.get("PurchaseOrder")
     if purchase_order and purchase_order.get("confidence") > model_confidence_threshhold:
         return True
@@ -49,13 +63,9 @@ def ingest_invoice(invoice: bytes) -> dict:
         return {'candidate_process':candidateprocess_dict, 'invoice_data': invoice_data_dict}
     
     ## move to company metadata search
-    company_candidates = company_match(
-        invoice_data_dict.get('CustomerName'), 
-        invoice_data_dict.get('CustomerAddress').get('valueAddress'))
-    
-    if ( len(company_candidates) > 0):
-        candidateprocess_dict = {'process':'COMPANY_MATCH', 'company_candidates':company_candidates}
-        return {'candidate_process':candidateprocess_dict, 'invoice_data': invoice_data_dict}
+    company_candidates = attempt_company_lookup_strategies(invoice_data_dict)
+    if ( company_candidates ):
+        return company_candidates
 
     # no dice from cracked document data, move to GPT-4o
     gptscan_data_dict = scan_invoice_with_gpt(invoice)
