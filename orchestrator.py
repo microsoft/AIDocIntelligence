@@ -6,6 +6,7 @@ import companylookup
 from gptvision import scan_invoice_with_gpt
 
 model_confidence_threshhold = 0.8 # read from env var
+candidateprocess_dict = {'process':'','strategy':'', 'purchaseorder':'', 'candidates':[]}
 
 #
 def attempt_company_lookup_strategies(invoice_data_dict: dict) -> dict:
@@ -25,7 +26,9 @@ def attempt_company_lookup_strategies(invoice_data_dict: dict) -> dict:
             invoice_data_dict.get('CustomerAddress').get('valueAddress'))
         
         if ( len(company_candidates) > 0):
-            candidateprocess_dict = {'process':'COMPANY_MATCH', 'strategy':match_strategy.__class__.__name__, 'company_candidates':company_candidates}
+            candidateprocess_dict["process"] = 'COMPANY_MATCH'
+            candidateprocess_dict["strategy"] = match_strategy.__class__.__name__
+            candidateprocess_dict["company_candidates"] = company_candidates
             return {'candidate_process':candidateprocess_dict, 'invoice_data': invoice_data_dict}
         
     return None
@@ -59,7 +62,8 @@ def ingest_invoice(invoice: bytes) -> dict:
     # but we probably want to include more processing metadta
     # such as the candidate companies and their confidence scores
     if validate_po_number(invoice_data_dict):
-        candidateprocess_dict = {'process':'PONUMBER', 'purchaseorder':invoice_data_dict.get('PurchaseOrder').get('valueString')}
+        candidateprocess_dict["process"] = 'PONUMBER'
+        candidateprocess_dict["purchaseorder"] = invoice_data_dict.get('PurchaseOrder').get('valueString')
         return {'candidate_process':candidateprocess_dict, 'invoice_data': invoice_data_dict}
     
     ## move to company metadata search
@@ -71,5 +75,4 @@ def ingest_invoice(invoice: bytes) -> dict:
     gptscan_data_dict = scan_invoice_with_gpt(invoice)
 
     # todo: default to manual intervention
-
-    return {}
+    return {'candidate_process':candidateprocess_dict, 'invoice_data': invoice_data_dict}
