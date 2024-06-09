@@ -1,16 +1,19 @@
 import logging
 import json
+import datetime
 
 from docintelligence import crack_invoice
 import companylookup
 from gptvision import scan_invoice_with_gpt
 
 model_confidence_threshhold = 0.8 # read from env var
-candidateprocess_dict = {'process':'','strategy':'', 'purchaseorder':'', 'candidates':[]}
+candidateprocess_dict = {}
 
 #
 def attempt_company_lookup_strategies(invoice_data_dict: dict) -> dict:
     """ Attempt to match the company name and address to known companies using various strategies """
+
+    global candidateprocess_dict
 
     # this list has all the strategies we want to try
     # as soon as one returns candidates we exit
@@ -29,6 +32,7 @@ def attempt_company_lookup_strategies(invoice_data_dict: dict) -> dict:
             candidateprocess_dict["process"] = 'COMPANY_MATCH'
             candidateprocess_dict["strategy"] = match_strategy.__class__.__name__
             candidateprocess_dict["company_candidates"] = company_candidates
+            candidateprocess_dict["execution_end"] = datetime.datetime.now().isoformat()
             return {'candidate_process':candidateprocess_dict, 'invoice_data': invoice_data_dict}
         
     return None
@@ -48,8 +52,17 @@ def validate_po_number(invoice_data: dict) -> bool:
 
 def ingest_invoice(invoice: bytes) -> dict:
     """ Manage the orchestration of invoice processing """
-    # todo: add logging
+    # TODO: add logging
     
+    global candidateprocess_dict
+    candidateprocess_dict = {
+    'process':'',
+    'strategy':'',
+    'purchaseorder':'',
+    'candidates':[],
+    'execution_start': datetime.datetime.now().isoformat(),
+    'execution_end': None}
+
     # call the document analyze and poll for completion using pre-built invoice model
     invoice_data_dict = crack_invoice(invoice)
 
@@ -64,6 +77,7 @@ def ingest_invoice(invoice: bytes) -> dict:
     if validate_po_number(invoice_data_dict):
         candidateprocess_dict["process"] = 'PONUMBER'
         candidateprocess_dict["purchaseorder"] = invoice_data_dict.get('PurchaseOrder').get('valueString')
+        candidateprocess_dict["execution_end"] = datetime.datetime.now().isoformat()
         return {'candidate_process':candidateprocess_dict, 'invoice_data': invoice_data_dict}
     
     ## move to company metadata search
@@ -75,4 +89,5 @@ def ingest_invoice(invoice: bytes) -> dict:
     gptscan_data_dict = scan_invoice_with_gpt(invoice)
 
     # todo: default to manual intervention
+    candidateprocess_dict["execution_end"] = datetime.datetime.now().isoformat()
     return {'candidate_process':candidateprocess_dict, 'invoice_data': invoice_data_dict}
