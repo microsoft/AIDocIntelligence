@@ -21,11 +21,11 @@ class MatchStrategy(metaclass=abc.ABCMeta):
         return
     
     @abc.abstractmethod
-    def dict_has_required_fields(invoice_data_dict: dict) -> bool:
+    def dict_has_required_fields(self, invoice_data_dict: dict) -> bool:
         return
 
 class FuzzyCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStrategy):
-    def dict_has_required_fields(invoice_data_dict: dict) -> bool:
+    def dict_has_required_fields(self, invoice_data_dict: dict) -> bool:
         customer_name = invoice_data_dict.get('CustomerName')
         address_components = invoice_data_dict.get('CustomerAddress').get('valueAddress')
 
@@ -40,7 +40,7 @@ class FuzzyCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStra
     def execute(self, df: pd.DataFrame, invoice_data_dict: dict) -> list:
         matches = []
 
-        company_name = invoice_data_dict.get('CustomerName'), 
+        company_name = invoice_data_dict.get('CustomerName').get('valueString')
         address_components = invoice_data_dict.get('CustomerAddress').get('valueAddress')
 
         # Iterate over the rows in the DataFrame
@@ -48,7 +48,7 @@ class FuzzyCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStra
         # for company lookup this is probably fine but if more volume is expected than move to a database
         for index, row in df.iterrows():
             # Compare the company name and address with the input
-            name_match_ratio = fuzz.ratio(row['Name'].casefold(), company_name.get('valueString').casefold())
+            name_match_ratio = fuzz.ratio(row['Name'].casefold(), company_name.casefold())
             street_match_ratio = fuzz.ratio(row['Street'], address_components.get('houseNumber') + ' ' + address_components.get('road'))
             city_match = address_components.get('city').casefold() == row['City'].casefold()        
             state_match = True # address_components.get('state').casefold() == row['Region'].casefold() # TODO: state abbreviations? non-US addresses?
@@ -63,7 +63,7 @@ class FuzzyCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStra
         return matches
 
 class ExactCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStrategy):
-    def dict_has_required_fields(invoice_data_dict: dict) -> bool:
+    def dict_has_required_fields(self, invoice_data_dict: dict) -> bool:
         customer_name = invoice_data_dict.get('CustomerName')
         address_components = invoice_data_dict.get('CustomerAddress').get('valueAddress')
 
@@ -79,16 +79,15 @@ class ExactCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStra
 
         matches = []
 
-        company_name = invoice_data_dict.get('CustomerName'), 
+        company_name = invoice_data_dict.get('CustomerName').get('valueString') 
         address_components = invoice_data_dict.get('CustomerAddress').get('valueAddress')
-
 
         # Iterate over the rows in the DataFrame
         # TODO: is there a better way besides the brute force loop?
         # for company lookup this is probably fine but if more volume is expected than move to a database
         for index, row in df.iterrows():
             # Compare the company name and address with the input
-            name_match = row['Name'].casefold() == company_name.get('valueString').casefold()
+            name_match = row['Name'].casefold() == company_name.casefold()
             street_match_ratio = fuzz.ratio(row['Street'], address_components.get('houseNumber') + ' ' + address_components.get('road'))
             city_match = address_components.get('city').casefold() == row['City'].casefold()        
             state_match = True # address_components.get('state').casefold() == row['Region'].casefold() # TODO: state abbreviations? non-US addresses?
@@ -108,11 +107,11 @@ class CompanyMatcher():
     def __init__(self, matching_strategy: MatchStrategy) -> None:
         self.strategy = matching_strategy
 
-    def match_companies(self, company_name: str, address_components: dict) -> list:
+    def match_companies(self, invoice_data_dict: dict) -> list:
         # Read the CSV file
         # TODO: validate we have a company name and address data before proceeding
         # TODO: can we read this once and cache?
         df = pd.read_csv(os.environ['COMPANY_FILE_PATH'], dtype={'Postal Code':str}, keep_default_na=False)
 
-        return self.strategy.execute(df, company_name, address_components)
+        return self.strategy.execute(df, invoice_data_dict)
         
