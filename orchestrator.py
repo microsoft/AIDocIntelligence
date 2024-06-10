@@ -22,12 +22,17 @@ def attempt_company_lookup_strategies(invoice_data_dict: dict) -> dict:
         companylookup.FuzzyCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy()]
 
     for match_strategy in match_strategies:
+        # only execute this strategy if we have the required data
+        if ( not match_strategy.dict_has_required_fields(invoice_data_dict) ):
+            continue
+
+        # create a matcher engine with this strategy
         matcher = companylookup.CompanyMatcher(match_strategy)
 
-        company_candidates = matcher.match_companies(
-            invoice_data_dict.get('CustomerName'), 
-            invoice_data_dict.get('CustomerAddress').get('valueAddress'))
+        # execute matcher
+        company_candidates = matcher.match_companies(invoice_data_dict)
         
+        # if we found candidates then we return and stop processing other strategies
         if ( len(company_candidates) > 0):
             candidateprocess_dict["process"] = 'COMPANY_MATCH'
             candidateprocess_dict["strategy"] = match_strategy.__class__.__name__

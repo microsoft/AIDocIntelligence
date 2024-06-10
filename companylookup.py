@@ -17,18 +17,36 @@ from fuzzywuzzy import fuzz
 # at current volume that is acceptable but consider other alernatives
 class MatchStrategy(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def execute(self, df: pd.DataFrame, company_name: str, address_components: dict) -> list:
+    def execute(self, df: pd.DataFrame, invoice_data_dict: dict) -> list:
+        return
+    
+    @abc.abstractmethod
+    def dict_has_required_fields(invoice_data_dict: dict) -> bool:
         return
 
 class FuzzyCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStrategy):
-    def execute(self, df: pd.DataFrame, company_name: str, address_components: dict) -> list:
+    def dict_has_required_fields(invoice_data_dict: dict) -> bool:
+        customer_name = invoice_data_dict.get('CustomerName')
+        address_components = invoice_data_dict.get('CustomerAddress').get('valueAddress')
 
+        return (
+            customer_name.get("valueString") and customer_name.get('confidence') > 0.8
+            and invoice_data_dict.get('CustomerAddress').get('confidence') > 0.8
+            and address_components.get('houseNumber')
+            and address_components.get('road')
+            and address_components.get('city')
+            and address_components.get('postalCode'))
+    
+    def execute(self, df: pd.DataFrame, invoice_data_dict: dict) -> list:
         matches = []
+
+        company_name = invoice_data_dict.get('CustomerName'), 
+        address_components = invoice_data_dict.get('CustomerAddress').get('valueAddress')
 
         # Iterate over the rows in the DataFrame
         # TODO: is there a better way besides the brute force loop?
         # for company lookup this is probably fine but if more volume is expected than move to a database
-        for index, row in df[df.Name.str.startswith('Mediabrands')].iterrows():
+        for index, row in df.iterrows():
             # Compare the company name and address with the input
             name_match_ratio = fuzz.ratio(row['Name'].casefold(), company_name.get('valueString').casefold())
             street_match_ratio = fuzz.ratio(row['Street'], address_components.get('houseNumber') + ' ' + address_components.get('road'))
@@ -45,14 +63,30 @@ class FuzzyCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStra
         return matches
 
 class ExactCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStrategy):
-    def execute(self, df: pd.DataFrame, company_name: str, address_components: dict) -> list:
+    def dict_has_required_fields(invoice_data_dict: dict) -> bool:
+        customer_name = invoice_data_dict.get('CustomerName')
+        address_components = invoice_data_dict.get('CustomerAddress').get('valueAddress')
+
+        return (
+            customer_name.get("valueString") and customer_name.get('confidence') > 0.8
+            and invoice_data_dict.get('CustomerAddress').get('confidence') > 0.8
+            and address_components.get('houseNumber')
+            and address_components.get('road')
+            and address_components.get('city')
+            and address_components.get('postalCode'))
+    
+    def execute(self, df: pd.DataFrame, invoice_data_dict: dict) -> list:
 
         matches = []
+
+        company_name = invoice_data_dict.get('CustomerName'), 
+        address_components = invoice_data_dict.get('CustomerAddress').get('valueAddress')
+
 
         # Iterate over the rows in the DataFrame
         # TODO: is there a better way besides the brute force loop?
         # for company lookup this is probably fine but if more volume is expected than move to a database
-        for index, row in df[df.Name.str.startswith('Mediabrands')].iterrows():
+        for index, row in df.iterrows():
             # Compare the company name and address with the input
             name_match = row['Name'].casefold() == company_name.get('valueString').casefold()
             street_match_ratio = fuzz.ratio(row['Street'], address_components.get('houseNumber') + ' ' + address_components.get('road'))
