@@ -33,9 +33,7 @@ class FuzzyCompanyName_PostCode_City_RefineByStreetAndHouse_MatchStrategy(MatchS
 
         return (
             customer_name.get("valueString") and customer_name.get('confidence') > 0.8
-            and invoice_data_dict.get('CustomerAddress').get('confidence') > 0.8
-            and address_components.get('streetAddress')
-            and address_components.get('city'))
+            and invoice_data_dict.get('CustomerAddress').get('confidence') > 0.8 )
     
     def fuzzy_search_combined(self,query, df, threshold=80, limit=10):
         matches = process.extract(query, df['Combined'], limit=limit, scorer=fuzz.token_set_ratio)
@@ -68,14 +66,14 @@ class FuzzyCompanyName_PostCode_City_RefineByStreetAndHouse_MatchStrategy(MatchS
         # Create a combined column for initial search
         df['Combined'] = df.apply(lambda x: self.combine_name_address(x), axis=1)
         #Query the column by company name, postal Code and City
-        initial_query = ' '.join(filter(None,[company_name.casefold(),address_components.get('postalCode').casefold(),address_components.get('city').casefold()]))
+        initial_query = ' '.join(filter(None,[ company_name.casefold(),(address_components.get('postalCode') or '').casefold(),(address_components.get('city') or '').casefold()]))
    
         #Get the Initial Search resuult
         initial_results = self.fuzzy_search_combined(initial_query, df)
 
         #Define the refine search components
         refine_components = {
-            'Street': ' '.join(filter(None,[address_components.get('house').casefold(),address_components.get('streetAddress').casefold()]))
+            'Street': ' '.join(filter(None,[(address_components.get('house') or '').casefold(),(address_components.get('streetAddress') or '').casefold()]))
         }
 
         #Refine the Initial Search Result 
