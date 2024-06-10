@@ -2,6 +2,14 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "CodeWithMS - Local Testing",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "localtest.py",
+      "console": "integratedTerminal",
+      "args": "datafiles/documents"
+    },    
+    {
       "name": "Python Debugger: Current File with Arguments",
       "type": "debugpy",
       "request": "launch",
