@@ -66,16 +66,16 @@ class FuzzyCompanyName_PostCode_City_RefineByStreetAndHouse_MatchStrategy(MatchS
         
         #Combine Column for Initial Search
         df['Combined'] = df.apply(self.combine_name_address, axis=1)
-                        
+                                
         #Query the column by company name, postal Code and City
-        initial_query = f"{company_name.casefold()} {address_components.get('postalCode').casefold()} {address_components.get('city').casefold()}"        
-
+        initial_query = ' '.join(filter(None, company_name.casefold(),address_components.get('postalCode').casefold(),address_components.get('city').casefold()))
+   
         #Get the Initial Search resuult
         initial_results = self.fuzzy_search_combined(initial_query, df)
 
         #Define the refine search components
         refine_components = {
-            'Street': address_components.get('house').casefold() + address_components.get('streetAddress').casefold()            
+            'Street': ' '.join(filter(None, address_components.get('house').casefold(),address_components.get('streetAddress').casefold()))
         }
 
         #Refine the Initial Search Result 
