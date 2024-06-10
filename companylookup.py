@@ -38,14 +38,14 @@ class FuzzyCompanyName_PostCode_City_RefineByStreetAndHouse_MatchStrategy(MatchS
             and address_components.get('city'))
     
     def fuzzy_search_combined(query, df, threshold=80, limit=10):
-        matches = process.extract(query, df['Combined'], limit=limit, scorer=fuzz.token_sort_ratio)
+        matches = process.extract(query, df['Combined'], limit=limit, scorer=fuzz.token_set_ratio)
         results = [df.iloc[match[2]] for match in matches if match[1] >= threshold]
         return results    
 
     def refine_results(initial_results, address_queries, threshold=80):
         refined_results = initial_results
         for column, query in zip(address_queries.keys(), address_queries.values()):
-            refined_results = [record for record in refined_results if fuzz.partial_ratio(record[column], query) >= threshold]
+            refined_results = [record for record in refined_results if fuzz.token_sort_ratio(record[column], query) >= threshold]
         return refined_results
 
     def append_final_results_to_matches(final_results):
