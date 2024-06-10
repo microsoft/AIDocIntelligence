@@ -19,7 +19,8 @@ def attempt_company_lookup_strategies(invoice_data_dict: dict) -> dict:
     # as soon as one returns candidates we exit
     match_strategies = [
         companylookup.ExactCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(),
-        companylookup.FuzzyCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy()]
+        companylookup.FuzzyCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(),
+        companylookup.FuzzyCompanyName_PostCode_City_RefineByStreetAndHouse_MatchStrategy()]
 
     for match_strategy in match_strategies:
         # only execute this strategy if we have the required data

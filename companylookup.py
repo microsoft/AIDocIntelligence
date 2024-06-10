@@ -1,6 +1,7 @@
 import os
 import abc
 import pandas as pd
+from fuzzywuzzy import process
 from fuzzywuzzy import fuzz
 
     # "valueAddress": {
@@ -23,6 +24,65 @@ class MatchStrategy(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def dict_has_required_fields(self, invoice_data_dict: dict) -> bool:
         return
+
+class FuzzyCompanyName_PostCode_City_RefineByStreetAndHouse_MatchStrategy(MatchStrategy):
+    
+    def dict_has_required_fields(self, invoice_data_dict: dict) -> bool:
+        customer_name = invoice_data_dict.get('CustomerName')
+        address_components = invoice_data_dict.get('CustomerAddress').get('valueAddress')
+
+        return (
+            customer_name.get("valueString") and customer_name.get('confidence') > 0.8
+            and invoice_data_dict.get('CustomerAddress').get('confidence') > 0.8 )
+    
+    def fuzzy_search_combined(self,query, df, threshold=80, limit=10):
+        matches = process.extract(query, df['Combined'], limit=limit, scorer=fuzz.token_set_ratio)
+        results = [df.iloc[match[2]] for match in matches if match[1] >= threshold]
+        return results    
+
+    def refine_results(self,initial_results, address_queries, threshold=80):
+        refined_results = initial_results
+        for column, query in zip(address_queries.keys(), address_queries.values()):
+            refined_results = [record for record in refined_results if fuzz.token_sort_ratio(record[column], query) >= threshold]
+        return refined_results
+
+    def append_final_results_to_matches(self,final_results):
+        matches = []
+        for record in final_results:
+            matches.append({'company_code': record['Code'], 'company_name': record['Name']})
+        return matches
+
+    def combine_name_address(self,row):
+        name_parts = [row['Name'], row['Name 1'], row['Name 2'], row['Postal Code'], row['City']]
+        combined = ' '.join(filter(None,name_parts))
+        return combined
+
+    def execute(self, df: pd.DataFrame, invoice_data_dict: dict) -> list:
+        matches = []
+
+        company_name = invoice_data_dict.get('CustomerName').get('valueString')
+        address_components = invoice_data_dict.get('CustomerAddress').get('valueAddress')
+        
+        # Create a combined column for initial search
+        df['Combined'] = df.apply(lambda x: self.combine_name_address(x), axis=1)
+        #Query the column by company name, postal Code and City
+        initial_query = ' '.join(filter(None,[ company_name.casefold(),(address_components.get('postalCode') or '').casefold(),(address_components.get('city') or '').casefold()]))
+   
+        #Get the Initial Search resuult
+        initial_results = self.fuzzy_search_combined(initial_query, df)
+
+        #Define the refine search components
+        refine_components = {
+            'Street': ' '.join(filter(None,[(address_components.get('house') or '').casefold(),(address_components.get('streetAddress') or '').casefold()]))
+        }
+
+        #Refine the Initial Search Result 
+        final_results = self.refine_results(initial_results, refine_components)
+
+        #Append the refined result to matches 
+        matches = self.append_final_results_to_matches(final_results)
+
+        return matches
 
 class FuzzyCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStrategy):
     def dict_has_required_fields(self, invoice_data_dict: dict) -> bool:
