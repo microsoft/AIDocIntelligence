@@ -13,7 +13,7 @@ def run_test():
         for file in os.listdir(fsarg):
             filename = os.fsdecode(file)
             if filename.endswith(".pdf"): 
-                with open(sys.argv[1] + '\\' + filename, "rb") as f:
+                with open(sys.argv[1] + os.sep + filename, "rb") as f:
                     print ('******* ' + filename + ' *******\n')
                     print(json.dumps(ingest_invoice(f), indent=2))
                     print ('\n\n')
