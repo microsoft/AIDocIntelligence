@@ -7,7 +7,7 @@
       "request": "launch",
       "program": "localtest.py",
       "console": "integratedTerminal",
-      "args": "datafiles/documents"
+      "args": "datafiles/documents > datafiles/test/output.txt"
     },    
     {
       "name": "Python Debugger: Current File with Arguments",
