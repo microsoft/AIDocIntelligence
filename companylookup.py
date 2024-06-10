@@ -29,10 +29,14 @@ class FuzzyCompanyName_PostCode_City_RefineByStreetAndHouse_MatchStrategy(MatchS
     
     def dict_has_required_fields(self, invoice_data_dict: dict) -> bool:
         customer_name = invoice_data_dict.get('CustomerName')
-        address_components = invoice_data_dict.get('CustomerAddress').get('valueAddress')
+        customer_address = invoice_data_dict.get('CustomerAddress')
+        address_components = None if customer_address is None else customer_address.get('valueAddress')
 
         return (
-            customer_name.get("valueString") and customer_name.get('confidence') > 0.8
+            customer_name
+            and customer_address
+            and address_components
+            and customer_name.get("valueString") and customer_name.get('confidence') > 0.8
             and invoice_data_dict.get('CustomerAddress').get('confidence') > 0.8 )
     
     def fuzzy_search_combined(self,query, df, threshold=80, limit=10):
@@ -87,10 +91,14 @@ class FuzzyCompanyName_PostCode_City_RefineByStreetAndHouse_MatchStrategy(MatchS
 class FuzzyCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStrategy):
     def dict_has_required_fields(self, invoice_data_dict: dict) -> bool:
         customer_name = invoice_data_dict.get('CustomerName')
-        address_components = invoice_data_dict.get('CustomerAddress').get('valueAddress')
+        customer_address = invoice_data_dict.get('CustomerAddress')
+        address_components = None if customer_address is None else invoice_data_dict.get('CustomerAddress').get('valueAddress')
 
         return (
-            customer_name.get("valueString") and customer_name.get('confidence') > 0.8
+            customer_name
+            and customer_name.get("valueString") and customer_name.get('confidence') > 0.8
+            and customer_address
+            and address_components
             and invoice_data_dict.get('CustomerAddress').get('confidence') > 0.8
             and address_components.get('houseNumber')
             and address_components.get('road')
@@ -125,10 +133,14 @@ class FuzzyCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStra
 class ExactCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStrategy):
     def dict_has_required_fields(self, invoice_data_dict: dict) -> bool:
         customer_name = invoice_data_dict.get('CustomerName')
-        address_components = invoice_data_dict.get('CustomerAddress').get('valueAddress')
+        customer_address = invoice_data_dict.get('CustomerAddress')
+        address_components = None if customer_address is None else invoice_data_dict.get('CustomerAddress').get('valueAddress')
 
         return (
-            customer_name.get("valueString") and customer_name.get('confidence') > 0.8
+            customer_name
+            and customer_name.get("valueString") and customer_name.get('confidence') > 0.8
+            and customer_address
+            and address_components
             and invoice_data_dict.get('CustomerAddress').get('confidence') > 0.8
             and address_components.get('houseNumber')
             and address_components.get('road')
