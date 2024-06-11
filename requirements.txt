@@ -8,3 +8,6 @@ python-dotenv
 pandas
 fuzzywuzzy
 python-Levenshtein
+pymupdf
+openai
+pillow

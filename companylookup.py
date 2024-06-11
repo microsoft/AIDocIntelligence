@@ -28,8 +28,8 @@ class MatchStrategy(metaclass=abc.ABCMeta):
 class FuzzyCompanyName_PostCode_City_RefineByStreetAndHouse_MatchStrategy(MatchStrategy):
     
     def dict_has_required_fields(self, invoice_data_dict: dict) -> bool:
-        customer_name = invoice_data_dict.get('CustomerName')
-        customer_address = invoice_data_dict.get('CustomerAddress')
+        customer_name = invoice_data_dict.get('CustomerName') or None
+        customer_address = invoice_data_dict.get('CustomerAddress') or None
         address_components = None if customer_address is None else customer_address.get('valueAddress')
 
         return (
@@ -90,8 +90,8 @@ class FuzzyCompanyName_PostCode_City_RefineByStreetAndHouse_MatchStrategy(MatchS
 
 class FuzzyCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStrategy):
     def dict_has_required_fields(self, invoice_data_dict: dict) -> bool:
-        customer_name = invoice_data_dict.get('CustomerName')
-        customer_address = invoice_data_dict.get('CustomerAddress')
+        customer_name = invoice_data_dict.get('CustomerName') or None
+        customer_address = invoice_data_dict.get('CustomerAddress') or None
         address_components = None if customer_address is None else invoice_data_dict.get('CustomerAddress').get('valueAddress')
 
         return (
@@ -132,8 +132,8 @@ class FuzzyCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStra
 
 class ExactCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStrategy):
     def dict_has_required_fields(self, invoice_data_dict: dict) -> bool:
-        customer_name = invoice_data_dict.get('CustomerName')
-        customer_address = invoice_data_dict.get('CustomerAddress')
+        customer_name = invoice_data_dict.get('CustomerName') or None
+        customer_address = invoice_data_dict.get('CustomerAddress') or None
         address_components = None if customer_address is None else invoice_data_dict.get('CustomerAddress').get('valueAddress')
 
         return (

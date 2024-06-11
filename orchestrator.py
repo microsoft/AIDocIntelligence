@@ -50,7 +50,7 @@ def validate_po_number(invoice_data: dict) -> bool:
     #     return True
     
     # TODO: is there any format to PO number we could verify?
-    purchase_order = invoice_data.get("PurchaseOrder")
+    purchase_order = invoice_data.get("PurchaseOrder") or None
     if purchase_order and purchase_order.get("confidence") > model_confidence_threshhold:
         return True
     
@@ -59,8 +59,31 @@ def validate_po_number(invoice_data: dict) -> bool:
 def validate_gpt_invoice_data(invoice_data: dict) -> bool:
     # the GPT-4o data does not guarantee it will match 
     # the DI schema so we need to validate and possibly
-    # scrib
+    # scrub
     return True
+
+def process_extracted_invoice_data(invoice_data_dict: dict) -> dict:
+    global candidateprocess_dict
+    # check the data dictionary for PO, or Company code. If any of these are found, it writes all the data and 
+    # their corresponding confidence scores, along with the number of pages in the document, to the suggested company file 
+    # in `.csv` format. If DI didn't extract anything for a data element, write `NONE` in that position.
+    # and exit
+
+    # PO Number is a special case because we immediately exit
+    # since it doesn't return a list of candidates we won't
+    # make it a company strategy
+    if validate_po_number(invoice_data_dict):
+        candidateprocess_dict["process"] = 'PONUMBER'
+        candidateprocess_dict["purchaseorder"] = invoice_data_dict.get('PurchaseOrder').get('valueString')
+        candidateprocess_dict["execution_end"] = datetime.datetime.now().isoformat()
+        return {'candidate_process':candidateprocess_dict, 'invoice_data': invoice_data_dict}
+    
+    ## move to company metadata search
+    company_candidates = attempt_company_lookup_strategies(invoice_data_dict)
+    if ( company_candidates ):
+        return company_candidates
+    
+    return None
 
 def ingest_invoice(invoice: bytes) -> dict:
     """ Manage the orchestration of invoice processing """
@@ -96,26 +119,3 @@ def ingest_invoice(invoice: bytes) -> dict:
 
     # in case of no matches we return the Doc Intelligence invoice data
     return {'candidate_process':candidateprocess_dict, 'invoice_data': di_invoice_data_dict}
-
-def process_extracted_invoice_data(invoice_data_dict: dict) -> dict:
-    global candidateprocess_dict
-    # check the data dictionary for PO, or Company code. If any of these are found, it writes all the data and 
-    # their corresponding confidence scores, along with the number of pages in the document, to the suggested company file 
-    # in `.csv` format. If DI didn't extract anything for a data element, write `NONE` in that position.
-    # and exit
-
-    # PO Number is a special case because we immediately exit
-    # since it doesn't return a list of candidates we won't
-    # make it a company strategy
-    if validate_po_number(invoice_data_dict):
-        candidateprocess_dict["process"] = 'PONUMBER'
-        candidateprocess_dict["purchaseorder"] = invoice_data_dict.get('PurchaseOrder').get('valueString')
-        candidateprocess_dict["execution_end"] = datetime.datetime.now().isoformat()
-        return {'candidate_process':candidateprocess_dict, 'invoice_data': invoice_data_dict}
-    
-    ## move to company metadata search
-    company_candidates = attempt_company_lookup_strategies(invoice_data_dict)
-    if ( company_candidates ):
-        return company_candidates
-    
-    return None
