@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import json
 import sys
 import os
+import pandas
 
 def run_test():
     load_dotenv(override=True)
@@ -22,6 +23,7 @@ def run_test():
                 continue
     elif ( os.path.isfile(fsarg)):
         with open(fsarg, "rb") as f:
-            print(json.dumps(ingest_invoice(f.read()), indent=2))
+            df = pandas.read_csv(os.environ["COMPANY_FILE_PATH"], dtype={'Postal Code':str}, keep_default_na=False)
+            print(json.dumps(ingest_invoice(f.read(),df), indent=2))
 
 run_test()
