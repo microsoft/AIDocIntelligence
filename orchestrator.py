@@ -2,16 +2,18 @@ import logging
 import json
 import datetime
 import os
+import io
+import pandas
 
 from docintelligence import crack_invoice
 import companylookup
 from gptvision import scan_invoice_with_gpt
 
-model_confidence_threshhold = os.environ.get("MODEL_CONFIDENCE_THRESHHOLD", 0.8)
+model_confidence_threshhold = float(os.environ.get("MODEL_CONFIDENCE_THRESHHOLD", 0.8))
 candidateprocess_dict = {}
 
 #
-def attempt_company_lookup_strategies(invoice_data_dict: dict) -> dict:
+def attempt_company_lookup_strategies(invoice_data_dict: dict, company_listing_df: pandas.DataFrame) -> dict:
     """ Attempt to match the company name and address to known companies using various strategies """
 
     global candidateprocess_dict
@@ -29,7 +31,7 @@ def attempt_company_lookup_strategies(invoice_data_dict: dict) -> dict:
             continue
 
         # create a matcher engine with this strategy
-        matcher = companylookup.CompanyMatcher(match_strategy)
+        matcher = companylookup.CompanyMatcher(match_strategy, company_listing_df)
 
         # execute matcher
         company_candidates = matcher.match_companies(invoice_data_dict)
@@ -62,7 +64,7 @@ def validate_gpt_invoice_data(invoice_data: dict) -> bool:
     # scrub
     return True
 
-def process_extracted_invoice_data(invoice_data_dict: dict) -> dict:
+def process_extracted_invoice_data(invoice_data_dict: dict, company_listing_df: pandas.DataFrame) -> dict:
     global candidateprocess_dict
     # check the data dictionary for PO, or Company code. If any of these are found, it writes all the data and 
     # their corresponding confidence scores, along with the number of pages in the document, to the suggested company file 
@@ -79,13 +81,13 @@ def process_extracted_invoice_data(invoice_data_dict: dict) -> dict:
         return {'candidate_process':candidateprocess_dict, 'invoice_data': invoice_data_dict}
     
     ## move to company metadata search
-    company_candidates = attempt_company_lookup_strategies(invoice_data_dict)
+    company_candidates = attempt_company_lookup_strategies(invoice_data_dict, company_listing_df)
     if ( company_candidates ):
         return company_candidates
     
     return None
 
-def ingest_invoice(invoice: bytes) -> dict:
+def ingest_invoice(invoice: bytes, company_listing_df: pandas.DataFrame) -> dict:
     """ Manage the orchestration of invoice processing """
     # TODO: add logging
     
@@ -101,7 +103,7 @@ def ingest_invoice(invoice: bytes) -> dict:
     # call the document analyze and poll for completion using pre-built invoice model
     di_invoice_data_dict = crack_invoice(invoice)
 
-    results = process_extracted_invoice_data(di_invoice_data_dict)
+    results = process_extracted_invoice_data(di_invoice_data_dict, company_listing_df)
 
     if results:
         return results
@@ -109,7 +111,7 @@ def ingest_invoice(invoice: bytes) -> dict:
     # no dice from cracked document data, move to GPT-4o
     gpt_invoice_data_dict = scan_invoice_with_gpt(invoice)
 
-    results = process_extracted_invoice_data(gpt_invoice_data_dict)
+    results = process_extracted_invoice_data(gpt_invoice_data_dict, company_listing_df)
 
     if results:
         return results

@@ -1,5 +1,6 @@
 import os
 import abc
+import io
 import pandas as pd
 from fuzzywuzzy import process
 from fuzzywuzzy import fuzz
@@ -179,15 +180,12 @@ class ExactCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStra
 
 class CompanyMatcher():
     strategy: MatchStrategy
+    company_listing_df: pd.DataFrame
 
-    def __init__(self, matching_strategy: MatchStrategy) -> None:
+    def __init__(self, matching_strategy: MatchStrategy, company_listing_df: pd.DataFrame) -> None:
         self.strategy = matching_strategy
+        self.company_listing_df = company_listing_df
 
     def match_companies(self, invoice_data_dict: dict) -> list:
-        # Read the CSV file
-        # TODO: validate we have a company name and address data before proceeding
-        # TODO: can we read this once and cache?
-        df = pd.read_csv(os.environ['COMPANY_FILE_PATH'], dtype={'Postal Code':str}, keep_default_na=False)
-
-        return self.strategy.execute(df, invoice_data_dict)
+        return self.strategy.execute(self.company_listing_df, invoice_data_dict)
         
