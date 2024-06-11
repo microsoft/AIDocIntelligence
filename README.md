@@ -15,6 +15,9 @@ The use of Azure Document Intelligence and its pre-built models is a well-establ
 * DOCUMENT_INTELLIGENCE_ENDPOINT
 * DOCUMENT_INTELLIGENCE_KEY
 * COMPANY_FILE_PATH
+* MODEL_CONFIDENCE_THRESHHOLD=0.8
+* GPT4_API_KEY
+* GPT4_ENDPOINT
 
 For local dev add these to a local.settings.json file 
 
