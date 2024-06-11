@@ -1,12 +1,13 @@
 import logging
 import json
 import datetime
+import os
 
 from docintelligence import crack_invoice
 import companylookup
 from gptvision import scan_invoice_with_gpt
 
-model_confidence_threshhold = 0.8 # read from env var
+model_confidence_threshhold = os.environ.get("MODEL_CONFIDENCE_THRESHHOLD", 0.8)
 candidateprocess_dict = {}
 
 #
@@ -49,37 +50,28 @@ def validate_po_number(invoice_data: dict) -> bool:
     #     return True
     
     # TODO: is there any format to PO number we could verify?
-    purchase_order = invoice_data.get("PurchaseOrder")
+    purchase_order = invoice_data.get("PurchaseOrder") or None
     if purchase_order and purchase_order.get("confidence") > model_confidence_threshhold:
         return True
     
     return False
 
+def validate_gpt_invoice_data(invoice_data: dict) -> bool:
+    # the GPT-4o data does not guarantee it will match 
+    # the DI schema so we need to validate and possibly
+    # scrub
+    return True
 
-def ingest_invoice(invoice: bytes) -> dict:
-    """ Manage the orchestration of invoice processing """
-    # TODO: add logging
-    
+def process_extracted_invoice_data(invoice_data_dict: dict) -> dict:
     global candidateprocess_dict
-    candidateprocess_dict = {
-    'process':'',
-    'strategy':'',
-    'purchaseorder':'',
-    'candidates':[],
-    'execution_start': datetime.datetime.now().isoformat(),
-    'execution_end': None}
-
-    # call the document analyze and poll for completion using pre-built invoice model
-    invoice_data_dict = crack_invoice(invoice)
-
     # check the data dictionary for PO, or Company code. If any of these are found, it writes all the data and 
     # their corresponding confidence scores, along with the number of pages in the document, to the suggested company file 
     # in `.csv` format. If DI didn't extract anything for a data element, write `NONE` in that position.
     # and exit
 
-    # TODO: for now just dumping the invoice fields data
-    # but we probably want to include more processing metadta
-    # such as the candidate companies and their confidence scores
+    # PO Number is a special case because we immediately exit
+    # since it doesn't return a list of candidates we won't
+    # make it a company strategy
     if validate_po_number(invoice_data_dict):
         candidateprocess_dict["process"] = 'PONUMBER'
         candidateprocess_dict["purchaseorder"] = invoice_data_dict.get('PurchaseOrder').get('valueString')
@@ -90,10 +82,40 @@ def ingest_invoice(invoice: bytes) -> dict:
     company_candidates = attempt_company_lookup_strategies(invoice_data_dict)
     if ( company_candidates ):
         return company_candidates
+    
+    return None
+
+def ingest_invoice(invoice: bytes) -> dict:
+    """ Manage the orchestration of invoice processing """
+    # TODO: add logging
+    
+    global candidateprocess_dict
+    candidateprocess_dict = {
+    'process':'',
+    'strategy':'',
+    'purchaseorder':'',
+    'company_candidates':[],
+    'execution_start': datetime.datetime.now().isoformat(),
+    'execution_end': None}
+
+    # call the document analyze and poll for completion using pre-built invoice model
+    di_invoice_data_dict = crack_invoice(invoice)
+
+    results = process_extracted_invoice_data(di_invoice_data_dict)
+
+    if results:
+        return results
 
     # no dice from cracked document data, move to GPT-4o
-    gptscan_data_dict = scan_invoice_with_gpt(invoice)
+    gpt_invoice_data_dict = scan_invoice_with_gpt(invoice)
 
-    # todo: default to manual intervention
+    results = process_extracted_invoice_data(gpt_invoice_data_dict)
+
+    if results:
+        return results
+
+    # TODO: failover to manual intervention
     candidateprocess_dict["execution_end"] = datetime.datetime.now().isoformat()
-    return {'candidate_process':candidateprocess_dict, 'invoice_data': invoice_data_dict}
+
+    # in case of no matches we return the Doc Intelligence invoice data
+    return {'candidate_process':candidateprocess_dict, 'invoice_data': di_invoice_data_dict}

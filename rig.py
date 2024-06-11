@@ -5,7 +5,7 @@ import sys
 import os
 
 def run_test():
-    load_dotenv()
+    load_dotenv(override=True)
 
     fsarg = os.fsencode(sys.argv[1])
 
@@ -13,7 +13,7 @@ def run_test():
         for file in os.listdir(fsarg):
             filename = os.fsdecode(file)
             if filename.endswith(".pdf"): 
-                with open(sys.argv[1] + '\\' + filename, "rb") as f:
+                with open(sys.argv[1] + os.sep + filename, "rb") as f:
                     print ('******* ' + filename + ' *******\n')
                     print(json.dumps(ingest_invoice(f), indent=2))
                     print ('\n\n')
@@ -22,6 +22,6 @@ def run_test():
                 continue
     elif ( os.path.isfile(fsarg)):
         with open(fsarg, "rb") as f:
-            print(json.dumps(ingest_invoice(f), indent=2))
+            print(json.dumps(ingest_invoice(f.read()), indent=2))
 
 run_test()
