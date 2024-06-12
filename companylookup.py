@@ -40,28 +40,29 @@ class FuzzyCompanyName_PostCode_City_RefineByStreetAndHouse_MatchStrategy(MatchS
             and customer_name.get("valueString") and customer_name.get('confidence') > 0.8
             and invoice_data_dict.get('CustomerAddress').get('confidence') > 0.8 )
     
-    def fuzzy_search_combined(self,query, df, threshold=80, limit=10):
-        matches = process.extract(query, df['Combined'], limit=limit, scorer=fuzz.token_set_ratio)
-        results = [df.iloc[match[2]] for match in matches if match[1] >= threshold]
-        return results    
+    def fuzzy_search_combined(self,query, df, threshold=90, alternative=60 ,limit=10):
+        matches = process.extract(query, df['Combined'], limit=limit, scorer=fuzz.token_sort_ratio)
+        results = [df.iloc[match[2]] for match in matches if match[1] >= threshold ] 
+        alternative_results = [df.iloc[match[2]] for match in matches if match[1] >= alternative and  match[1] < threshold] 
+        return results, alternative_results
 
     def refine_results(self,initial_results, address_queries, threshold=80):
-        refined_results = initial_results
         for column, query in zip(address_queries.keys(), address_queries.values()):
-            refined_results = [record for record in refined_results if fuzz.token_sort_ratio(record[column], query) >= threshold]
+            refined_results = [record for record in initial_results if fuzz.token_set_ratio(record[column], query) >= threshold]
         return refined_results
 
-    def append_final_results_to_matches(self,final_results):
-        matches = []
-        for record in final_results:
-            matches.append({'company_code': record['Code'], 'company_name': record['Name']})
-        return matches
+    def append_final_results_to_matches(self,result,final_results):
+        for record in result:
+            final_results.append({'company_code': record['Code'], 'company_name': record['Name']})
+        return final_results
 
     def combine_name_address(self,row):
         name_parts = [row['Name'], row['Name 1'], row['Name 2'], row['Postal Code'], row['City']]
-        combined = ' '.join(filter(None,name_parts))
-        return combined
-
+        combined = ' '.join(filter(None, name_parts))
+        seen = set()
+        unique_words = [word for word in combined.split() if not (word in seen or seen.add(word))]
+        return ' '.join(unique_words)
+        
     def execute(self, df: pd.DataFrame, invoice_data_dict: dict) -> list:
         matches = []
 
@@ -74,18 +75,21 @@ class FuzzyCompanyName_PostCode_City_RefineByStreetAndHouse_MatchStrategy(MatchS
         initial_query = ' '.join(filter(None,[ company_name.casefold(),(address_components.get('postalCode') or '').casefold(),(address_components.get('city') or '').casefold()]))
    
         #Get the Initial Search resuult
-        initial_results = self.fuzzy_search_combined(initial_query, df)
+        best_results, alternative_results = self.fuzzy_search_combined(initial_query, df)
+
+        #Store the Best Result
+        matches = self.append_final_results_to_matches(best_results,matches)
 
         #Define the refine search components
         refine_components = {
             'Street': ' '.join(filter(None,[(address_components.get('house') or '').casefold(),(address_components.get('streetAddress') or '').casefold()]))
         }
 
-        #Refine the Initial Search Result 
-        final_results = self.refine_results(initial_results, refine_components)
+        #Refine the Initial alternative Result 
+        refine_results = self.refine_results(alternative_results, refine_components)
 
         #Append the refined result to matches 
-        matches = self.append_final_results_to_matches(final_results)
+        matches = self.append_final_results_to_matches(refine_results,matches)
 
         return matches
 
