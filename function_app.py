@@ -4,6 +4,8 @@ import json
 import logging
 import pandas
 
+from azure.monitor.opentelemetry import configure_azure_monitor
+from opentelemetry import trace
 from orchestrator import ingest_invoice
 
 app = func.FunctionApp()
@@ -19,6 +21,11 @@ def new_invoice_file(
     invoiceblob: func.InputStream, 
     companylistingcsv: func.InputStream,
     outputblob: func.Out[str]):
+
+    # Configure OpenTelemetry to use Azure Monitor with the 
+    # APPLICATIONINSIGHTS_CONNECTION_STRING environment variable.
+    configure_azure_monitor()
+
     logging.info(f"Python blob trigger function processed blob"
                 f"Name: {invoiceblob.name} Blob Size: {invoiceblob.length} bytes")
     

@@ -11,3 +11,4 @@ python-Levenshtein
 pymupdf
 openai
 pillow
+azure-monitor-opentelemetry
