@@ -13,7 +13,10 @@ model_confidence_threshhold = float(os.environ.get("MODEL_CONFIDENCE_THRESHHOLD"
 candidateprocess_dict = {}
 
 #
-def attempt_company_lookup_strategies(invoice_data_dict: dict, company_listing_df: pandas.DataFrame) -> dict:
+def attempt_company_lookup_strategies(
+        invoice_data_dict: dict, 
+        company_listing_df: pandas.DataFrame,
+        ai_service: str) -> dict:
     """ Attempt to match the company name and address to known companies using various strategies """
 
     global candidateprocess_dict
@@ -39,6 +42,7 @@ def attempt_company_lookup_strategies(invoice_data_dict: dict, company_listing_d
         # if we found candidates then we return and stop processing other strategies
         if ( len(company_candidates) > 0):
             candidateprocess_dict["process"] = 'COMPANY_MATCH'
+            candidateprocess_dict["ai_service"] = ai_service
             candidateprocess_dict["strategy"] = match_strategy.__class__.__name__
             candidateprocess_dict["company_candidates"] = company_candidates
             candidateprocess_dict["execution_end"] = datetime.datetime.now().isoformat()
@@ -64,7 +68,11 @@ def validate_gpt_invoice_data(invoice_data: dict) -> bool:
     # scrub
     return True
 
-def process_extracted_invoice_data(invoice_data_dict: dict, company_listing_df: pandas.DataFrame) -> dict:
+def process_extracted_invoice_data(
+        invoice_data_dict: dict,
+        company_listing_df: pandas.DataFrame,
+        ai_service: str) -> dict:
+    
     global candidateprocess_dict
     # check the data dictionary for PO, or Company code. If any of these are found, it writes all the data and 
     # their corresponding confidence scores, along with the number of pages in the document, to the suggested company file 
@@ -76,12 +84,13 @@ def process_extracted_invoice_data(invoice_data_dict: dict, company_listing_df: 
     # make it a company strategy
     if validate_po_number(invoice_data_dict):
         candidateprocess_dict["process"] = 'PONUMBER'
+        candidateprocess_dict["ai_service"] = ai_service
         candidateprocess_dict["purchaseorder"] = invoice_data_dict.get('PurchaseOrder').get('valueString')
         candidateprocess_dict["execution_end"] = datetime.datetime.now().isoformat()
         return {'candidate_process':candidateprocess_dict, 'invoice_data': invoice_data_dict}
     
     ## move to company metadata search
-    company_candidates = attempt_company_lookup_strategies(invoice_data_dict, company_listing_df)
+    company_candidates = attempt_company_lookup_strategies(invoice_data_dict, company_listing_df, ai_service)
     if ( company_candidates ):
         return company_candidates
     
@@ -94,6 +103,7 @@ def ingest_invoice(invoice: bytes, company_listing_df: pandas.DataFrame) -> dict
     global candidateprocess_dict
     candidateprocess_dict = {
     'process':'',
+    'ai_service':'',
     'strategy':'',
     'purchaseorder':'',
     'company_candidates':[],
@@ -103,7 +113,7 @@ def ingest_invoice(invoice: bytes, company_listing_df: pandas.DataFrame) -> dict
     # call the document analyze and poll for completion using pre-built invoice model
     di_invoice_data_dict = crack_invoice(invoice)
 
-    results = process_extracted_invoice_data(di_invoice_data_dict, company_listing_df)
+    results = process_extracted_invoice_data(di_invoice_data_dict, company_listing_df, 'DocIntelligence')
 
     if results:
         return results
@@ -111,7 +121,7 @@ def ingest_invoice(invoice: bytes, company_listing_df: pandas.DataFrame) -> dict
     # no dice from cracked document data, move to GPT-4o
     gpt_invoice_data_dict = scan_invoice_with_gpt(invoice)
 
-    results = process_extracted_invoice_data(gpt_invoice_data_dict, company_listing_df)
+    results = process_extracted_invoice_data(gpt_invoice_data_dict, company_listing_df, 'GPT-4o')
 
     if results:
         return results
