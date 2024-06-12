@@ -11,12 +11,12 @@ from orchestrator import ingest_invoice
 
 app = func.FunctionApp()
 
-@app.blob_trigger(arg_name="invoiceblob", path="invoices",
+@app.blob_trigger(arg_name="invoiceblob", path="invoices/{filename}",
                                connection="ARTIFACT_STORAGE") 
 @app.blob_input(
     arg_name="companylistingcsv", path="metadata/comp_plant_addr.csv", connection="ARTIFACT_STORAGE")
 @app.blob_output(arg_name="outputblob",
-                path="results/{rand-guid}.json",
+                path="results/{filename}-{rand-guid}.json",
                 connection="ARTIFACT_STORAGE")
 def new_invoice_file(
     invoiceblob: func.InputStream, 
