@@ -3,6 +3,7 @@ import datetime
 import json
 import logging
 import pandas
+import os
 
 from azure.monitor.opentelemetry import configure_azure_monitor
 from opentelemetry import trace
@@ -24,7 +25,8 @@ def new_invoice_file(
 
     # Configure OpenTelemetry to use Azure Monitor with the 
     # APPLICATIONINSIGHTS_CONNECTION_STRING environment variable.
-    configure_azure_monitor()
+    if ( "APPLICATIONINSIGHTS_CONNECTION_STRING" in os.environ ):
+        configure_azure_monitor()
 
     logging.info(f"Python blob trigger function processed blob"
                 f"Name: {invoiceblob.name} Blob Size: {invoiceblob.length} bytes")
