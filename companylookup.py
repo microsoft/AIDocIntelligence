@@ -25,6 +25,9 @@ class MatchStrategy(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def dict_has_required_fields(self, invoice_data_dict: dict) -> bool:
         return
+    
+    def safe_string(self, input: str) -> str:
+        return input.replace("\n","").replace("\r","").replace("\t","").strip()
 
 class FuzzyCompanyName_PostCode_City_RefineByStreetAndHouse_MatchStrategy(MatchStrategy):
     
@@ -113,8 +116,10 @@ class FuzzyCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStra
     def execute(self, df: pd.DataFrame, invoice_data_dict: dict) -> list:
         matches = []
 
-        company_name = invoice_data_dict.get('CustomerName').get('valueString')
+        company_name = self.safe_string(invoice_data_dict.get('CustomerName').get('valueString'))
         address_components = invoice_data_dict.get('CustomerAddress').get('valueAddress')
+        for key, val in address_components.items():
+            address_components[key] = self.safe_string(val)
 
         # Iterate over the rows in the DataFrame
         # TODO: is there a better way besides the brute force loop?
@@ -156,8 +161,10 @@ class ExactCompanyName_FuzzyStreet_ExactCity_ExactPostal_MatchStrategy(MatchStra
 
         matches = []
 
-        company_name = invoice_data_dict.get('CustomerName').get('valueString') 
+        company_name = self.safe_string(invoice_data_dict.get('CustomerName').get('valueString'))
         address_components = invoice_data_dict.get('CustomerAddress').get('valueAddress')
+        for key, val in address_components.items():
+            address_components[key] = self.safe_string(val)
 
         # Iterate over the rows in the DataFrame
         # TODO: is there a better way besides the brute force loop?
@@ -186,6 +193,6 @@ class CompanyMatcher():
         self.strategy = matching_strategy
         self.company_listing_df = company_listing_df
 
-    def match_companies(self, invoice_data_dict: dict) -> list:
+    def match_companies(self, invoice_data_dict: dict) -> list:        
         return self.strategy.execute(self.company_listing_df, invoice_data_dict)
         
