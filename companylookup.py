@@ -2,6 +2,8 @@ import os
 import abc
 import io
 import pandas as pd
+import requests
+
 from fuzzywuzzy import process
 from fuzzywuzzy import fuzz
 
@@ -28,6 +30,34 @@ class MatchStrategy(metaclass=abc.ABCMeta):
     
     def safe_string(self, input: str) -> str:
         return input.replace("\n","").replace("\r","").replace("\t","").strip()
+    
+class ExternalCompanyNameLookup_MatchStrategy(MatchStrategy):
+    def dict_has_required_fields(self, invoice_data_dict: dict) -> bool:
+        return invoice_data_dict.get('CustomerName') or None
+    
+    def execute(self, df: pd.DataFrame, invoice_data_dict: dict) -> list:
+        matches = []
+
+        url = "https://postman-echo.com/post"
+        payload = {"customer_name": self.safe_string(invoice_data_dict.get('CustomerName').get('valueString'))}
+
+        # Send the HTTP POST request
+        response = requests.post(url, data=payload)
+
+        # Check if the request was successful
+        if response.status_code == 200:
+            # Parse the JSON response
+            data = response.json()
+
+            # assuming you got back an array you can pass it
+            # back to the orchestrator
+            for result in data:
+                matches.append({'company_code': result['code'], 'company_name': result['name']})
+
+            return(matches)
+        else:
+            print(f"Request failed with status code {response.status_code}")
+            return(matches)
 
 class FuzzyCompanyName_PostCode_City_RefineByStreetAndHouse_MatchStrategy(MatchStrategy):
     
