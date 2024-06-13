@@ -18,8 +18,15 @@ The use of Azure Document Intelligence and its pre-built models is a well-establ
 * MODEL_CONFIDENCE_THRESHHOLD=0.8
 * GPT4_API_KEY
 * GPT4_ENDPOINT
+* APPLICATIONINSIGHTS_CONNECTION_STRING
 
 For local dev add these to a local.settings.json file 
+
+## Storage account setup
+The storage account should have three containers that the function app can write to:
+1. invoices-inbox
+2. invoices-results
+3. invoices-processed
 
 ## Contributing
 
