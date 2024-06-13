@@ -82,6 +82,8 @@ def scan_invoice_with_gpt(invoice: bytes) -> dict:
 def convert_pdf_to_images(invoice: bytes) -> list:
     images = []
 
+    # TODO: when run locally invoice is not a byte array
+    # and this stream parameter throws an exception
     pdf_document = pymupdf.open(stream=invoice)
     for page_number in range(len(pdf_document)):  
         page = pdf_document.load_page(page_number)  
@@ -89,9 +91,3 @@ def convert_pdf_to_images(invoice: bytes) -> list:
         images.append(image)
 
     return images
-
-    #     image_out_file = os.path.join(image_out_dir, f'page_{page_number + 1}.png')
-    #     image.save(image_out_file)  
-    #     if page_number % 100 == 0:
-    #         print(f'Processed {page_number} images...')  
-    # pass
