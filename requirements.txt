@@ -13,3 +13,4 @@ pymupdf
 openai
 pillow
 azure-monitor-opentelemetry
+requests
