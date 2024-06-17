@@ -41,7 +41,7 @@ def new_invoice_file(
     
     df = pandas.read_csv(companylistingcsv, dtype={'Postal Code':str}, keep_default_na=False)
     invoice_blob_bytes = invoiceblob.read()
-    results = ingest_invoice(invoice_blob_bytes, df)
+    results = ingest_invoice(invoiceblob.name, invoice_blob_bytes, df)
 
     # do something with results
     outputblob.set(json.dumps(results))

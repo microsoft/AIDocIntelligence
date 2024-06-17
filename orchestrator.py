@@ -96,19 +96,20 @@ def process_extracted_invoice_data(
     
     return None
 
-def ingest_invoice(invoice: bytes, company_listing_df: pandas.DataFrame) -> dict:
+def ingest_invoice(source_file_name: str, invoice: bytes, company_listing_df: pandas.DataFrame) -> dict:
     """ Manage the orchestration of invoice processing """
     # TODO: add logging
     
     global candidateprocess_dict
     candidateprocess_dict = {
-    'process':'',
-    'ai_service':'',
-    'strategy':'',
-    'purchaseorder':'',
-    'company_candidates':[],
-    'execution_start': datetime.datetime.now().isoformat(),
-    'execution_end': None}
+        'source_file': source_file_name,
+        'process':'',
+        'ai_service':'',
+        'strategy':'',
+        'purchaseorder':'',
+        'company_candidates':[],
+        'execution_start': datetime.datetime.now().isoformat(),
+        'execution_end': None}
 
     # call the document analyze and poll for completion using pre-built invoice model
     di_invoice_data_dict = crack_invoice(invoice)
@@ -119,12 +120,12 @@ def ingest_invoice(invoice: bytes, company_listing_df: pandas.DataFrame) -> dict
         return results
 
     # no dice from cracked document data, move to GPT-4o
-    gpt_invoice_data_dict = scan_invoice_with_gpt(invoice)
+    # gpt_invoice_data_dict = scan_invoice_with_gpt(invoice)
 
-    results = process_extracted_invoice_data(gpt_invoice_data_dict, company_listing_df, 'GPT-4o')
+    # results = process_extracted_invoice_data(gpt_invoice_data_dict, company_listing_df, 'GPT-4o')
 
-    if results:
-        return results
+    # if results:
+    #     return results
 
     # TODO: failover to manual intervention
     candidateprocess_dict["execution_end"] = datetime.datetime.now().isoformat()
