@@ -39,7 +39,7 @@ def scan_invoice_with_gpt(invoice: bytes) -> dict:
     }
 
     # TODO: quality of extract might be improved with more thorough prompting, perhaps with examples
-    prompt = ("Extract the data from this invoice and return it as json. If a value is not present, provide an empty string. Do not format the response with markdown. Use the following structure: " + json.dumps(prompt_structure))
+    prompt = ("Extract the data from this invoice and return it as json. If a value is not present, provide an empty string. Do not format the response with markdown. Use the following structure, setting the valueString key with the value: " + json.dumps(prompt_structure))
 
     messages_content = [
         {
