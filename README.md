@@ -1,10 +1,10 @@
 # Intelligent Document Processing with GPT Fallback
 
-The use of Azure Document Intelligence and its pre-built models is a well-established method to crack unstructured documents. Nevertheless, there are always documents that it is unable to perform reilable extraction with. This process attempts to extract required data points for an invoice. If those elements are not found then we fall back to other means.
-- Fuzzy matching against a list of known vales
+The use of Azure Document Intelligence and its pre-built models is a well-established method to crack unstructured documents. Nevertheless, there are always documents that it is unable to perform reliable extraction with. This process attempts to extract required data points for an invoice. If those elements are not found then we fall back to other means.
+- Fuzzy matching against a list of known values
 - Use of GPT models to extract data
 
-## Prerequisites for local dev
+## Pre-requisites for local dev
 * Python 3.11
 * Azure Functions Core Tools
 * Azure Document Intelligence instance with endpoint and API key
